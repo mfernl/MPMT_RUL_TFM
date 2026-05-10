@@ -239,13 +239,73 @@ def normalizar_por_condicion(train_df, test_df, feature_cols, n_condiciones):
     
     return train_df, test_df, scalers
 
+def extraer_condicion_por_ventana(df, window_size, n_condiciones):
+    """
+    Para cada ventana de entrenamiento extrae la condición operacional
+    predominante y la convierte en one-hot.
+
+    Salida: (n_ventanas, n_condiciones) como numpy float32
+    """
+    static_list = []
+
+    for motor_id, grupo in df.groupby("motor_id"):
+        condiciones = grupo["condicion"].values
+        n_ciclos    = len(condiciones)
+
+        if n_ciclos < window_size:
+            # ventana con padding — usar la condición del primer ciclo
+            n_ventanas = 1
+            cond_predominante = [int(condiciones[0])]
+        else:
+            n_ventanas = n_ciclos - window_size + 1
+            cond_predominante = []
+            for i in range(n_ventanas):
+                ventana_cond = condiciones[i:i + window_size]
+                # condición más frecuente en la ventana
+                cond = int(np.bincount(ventana_cond).argmax())
+                cond_predominante.append(cond)
+
+        # one-hot encoding
+        for cond in cond_predominante:
+            onehot = np.zeros(n_condiciones, dtype=np.float32)
+            onehot[cond] = 1.0
+            static_list.append(onehot)
+
+    return np.array(static_list, dtype=np.float32)
+
+
+def extraer_condicion_por_ventana_test(df, window_size, n_condiciones):
+    """
+    Para test solo tomamos la última ventana de cada motor.
+    """
+    static_list = []
+
+    for motor_id, grupo in df.groupby("motor_id"):
+        condiciones = grupo["condicion"].values
+        n_ciclos    = len(condiciones)
+
+        if n_ciclos >= window_size:
+            ventana_cond = condiciones[-window_size:]
+        else:
+            ventana_cond = condiciones
+
+        cond = int(np.bincount(ventana_cond).argmax())
+        onehot = np.zeros(n_condiciones, dtype=np.float32)
+        onehot[cond] = 1.0
+        static_list.append(onehot)
+
+    return np.array(static_list, dtype=np.float32)
+
 class CMAPSSDataset():
-    def __init__(self, X, y):
+    def __init__(self, X, y, static=None):
         self.X = torch.tensor(X, dtype=torch.float32)
         self.y = torch.tensor(y, dtype=torch.float32)
+        self.static = torch.tensor(static, dtype=torch.float32) if static is not None else None
 
     def __len__(self):
         return len(self.y)
 
     def __getitem__(self, idx):
+        if self.static is not None:
+            return self.X[idx], self.y[idx], self.static[idx]
         return self.X[idx], self.y[idx]
