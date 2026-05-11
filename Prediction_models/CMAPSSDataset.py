@@ -6,10 +6,10 @@ from sklearn.model_selection import train_test_split
 import torch
 
 CONFIG_DATASETS = {
-"FD001": {"n_condiciones": 1, "n_fallos": 1, "cnn_filtros": 64, "lstm_units": 64}, # Subset estable 
-"FD002": {"n_condiciones": 6, "n_fallos": 1, "cnn_filtros": 64, "lstm_units": 128}, # Subset con más condiciones => más tipos de degradación temporal
-"FD003": {"n_condiciones": 1, "n_fallos": 2, "cnn_filtros": 128, "lstm_units": 64}, # Más patrones posibles de degradación
-"FD004": {"n_condiciones": 6, "n_fallos": 2, "cnn_filtros": 128, "lstm_units": 128} # Ambos
+"FD001": {"n_condiciones": 1, "n_fallos": 1, "cnn_filtros": 64, "lstm_units": 64, "rul_max": 125}, # Subset estable 
+"FD002": {"n_condiciones": 6, "n_fallos": 1, "cnn_filtros": 64, "lstm_units": 128, "rul_max": 125}, # Subset con más condiciones => más tipos de degradación temporal
+"FD003": {"n_condiciones": 1, "n_fallos": 2, "cnn_filtros": 128, "lstm_units": 64, "rul_max": 150}, # Más patrones posibles de degradación
+"FD004": {"n_condiciones": 6, "n_fallos": 2, "cnn_filtros": 128, "lstm_units": 128, "rul_max": 150} # Ambos
 }
 
 #Eliminar sensores constantes
@@ -21,7 +21,7 @@ def eliminar_constantes(df, umbral_std=0.01):
     return df.drop(columns=constantes), constantes
 
 #Calcular y añadir la etiqueta RUL
-def add_rul_train(df, rul_max=110):
+def add_rul_train(df, rul_max):
     """
     RUL real = ciclos restantes hasta el fallo.
     Se trunca a rul_max (cap lineal): permite que el modelo se centre en los ciclos 
@@ -33,7 +33,7 @@ def add_rul_train(df, rul_max=110):
     df = df.drop(columns=["ciclo_max"])
     return df
 
-def add_rul_test(df, rul_finales, rul_max=110):
+def add_rul_test(df, rul_finales, rul_max):
     """
     En test, NASA proporciona cuántos ciclos quedaban al final
     del fragmento observado. Se suman los ciclos restantes y se calcula
