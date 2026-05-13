@@ -8,7 +8,7 @@ import torch
 CONFIG_DATASETS = {
 "FD001": {"n_condiciones": 1, "n_fallos": 1, "cnn_filtros": 64, "lstm_units": 64, "rul_max": 125}, # Subset estable 
 "FD002": {"n_condiciones": 6, "n_fallos": 1, "cnn_filtros": 64, "lstm_units": 128, "rul_max": 125}, # Subset con más condiciones => más tipos de degradación temporal
-"FD003": {"n_condiciones": 1, "n_fallos": 2, "cnn_filtros": 128, "lstm_units": 64, "rul_max": 150}, # Más patrones posibles de degradación
+"FD003": {"n_condiciones": 1, "n_fallos": 2, "cnn_filtros": 64, "lstm_units": 64, "rul_max": 150}, # Más patrones posibles de degradación
 "FD004": {"n_condiciones": 6, "n_fallos": 2, "cnn_filtros": 128, "lstm_units": 128, "rul_max": 150} # Ambos
 }
 
@@ -190,6 +190,8 @@ def identificar_condicion_operacional(df, n_condiciones=6):
     En FD002/FD004 hay 6 condiciones operacionales distintas.
     Las identificamos agrupando op_1, op_2, op_3 con KMeans.
     En FD001/FD003 con n_condiciones=1 asigna todo al cluster 0.
+
+    IMPORTANTE: llamar solo sobre train. Usar km.predict() para val y test.
     """
     op_cols = ["op_1", "op_2", "op_3"]
     
@@ -202,7 +204,7 @@ def identificar_condicion_operacional(df, n_condiciones=6):
     return df, km
 
 
-def normalizar_por_condicion(train_df, test_df, feature_cols, n_condiciones):
+def normalizar_por_condicion(train_df, val_df, test_df, feature_cols, n_condiciones):
     """
     Para FD002/FD004: ajusta un scaler distinto por condición operacional.
     Para FD001/FD003: normalización global (igual que antes).
@@ -210,34 +212,44 @@ def normalizar_por_condicion(train_df, test_df, feature_cols, n_condiciones):
     Esto evita que el modelo confunda variación por régimen de vuelo
     con variación por degradación.
     """
-    train_df[feature_cols] = train_df[feature_cols].astype(np.float64)
-    test_df[feature_cols]  = test_df[feature_cols].astype(np.float64)
-    
+    train_df = train_df.copy()
+    val_df = val_df.copy()
+    test_df = test_df.copy()
+ 
+    for df_ in [train_df, val_df, test_df]:
+        df_[feature_cols] = df_[feature_cols].astype(np.float64)
+ 
     if n_condiciones == 1:
         scaler = MinMaxScaler()
         train_df[feature_cols] = scaler.fit_transform(train_df[feature_cols])
+        val_df[feature_cols]   = scaler.transform(val_df[feature_cols])
         test_df[feature_cols]  = scaler.transform(test_df[feature_cols])
-        return train_df, test_df, {0: scaler}
-    
+        return train_df, val_df, test_df, {0: scaler}
+ 
     scalers = {}
     for cond in range(n_condiciones):
         mask_train = train_df["condicion"] == cond
-        mask_test = test_df["condicion"]  == cond
-        
+        mask_val   = val_df["condicion"]   == cond
+        mask_test  = test_df["condicion"]  == cond
+ 
         if mask_train.sum() == 0:
             continue
-            
+ 
         scaler = MinMaxScaler()
         train_df.loc[mask_train, feature_cols] = scaler.fit_transform(
             train_df.loc[mask_train, feature_cols]
         )
+        if mask_val.sum() > 0:
+            val_df.loc[mask_val, feature_cols] = scaler.transform(
+                val_df.loc[mask_val, feature_cols]
+            )
         if mask_test.sum() > 0:
             test_df.loc[mask_test, feature_cols] = scaler.transform(
                 test_df.loc[mask_test, feature_cols]
             )
         scalers[cond] = scaler
-    
-    return train_df, test_df, scalers
+ 
+    return train_df, val_df, test_df, scalers
 
 def extraer_condicion_por_ventana(df, window_size, n_condiciones):
     """
