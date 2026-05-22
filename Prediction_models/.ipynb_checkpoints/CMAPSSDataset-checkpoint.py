@@ -68,7 +68,7 @@ def norm(train_df, test_df, feature_cols):
     
     return train_df, test_df, scaler
 
-def crear_ventanas(df, feature_cols, window_size=30):
+def crear_ventanas(df, feature_cols, window_size):
     """
     Para cada motor, recorre sus ciclos con una ventana de tamaño window_size.
     Si el motor tiene menos ciclos que window_size, se rellena con padding
@@ -98,7 +98,7 @@ def crear_ventanas(df, feature_cols, window_size=30):
     
     return np.array(X_list, dtype=np.float32), np.array(y_list, dtype=np.float32)
 
-def crear_ventanas_test(df, feature_cols, window_size=30):
+def crear_ventanas_test(df, feature_cols, window_size):
     """
     Se usa la última ventana de cada motor
     """
