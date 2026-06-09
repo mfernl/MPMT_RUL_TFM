@@ -122,11 +122,8 @@ def crear_ventanas_test(df, feature_cols, window_size):
 
 def añadir_features_degradacion_rapido(df, sensor_cols, window_slope=10, suavizado=3):
     """
-    Versión vectorizada — entre 20x y 50x más rápida que la versión con bucles.
-    
-    La clave es operar sobre columnas enteras en lugar de valor a valor:
     - delta:  una resta de arrays
-    - slope:  rolling OLS vectorizado con fórmula analítica
+    - slope (pendiente):  rolling OLS vectorizado con fórmula analítica
     - accel:  diff sobre el slope suavizado
     """
     df = df.copy().sort_values(["motor_id", "ciclo"])
