@@ -24,8 +24,7 @@ def eliminar_constantes(df, umbral_std=0.01):
 def add_rul_train(df, rul_max):
     """
     RUL real = ciclos restantes hasta el fallo.
-    Se trunca a rul_max (cap lineal): permite que el modelo se centre en los ciclos 
-    cercanos al fallo. No hay necesidad de predecir el fallo desde el inicio del trayecto.
+    Se trunca a rul_max (cap lineal)
     """
     max_ciclo = df.groupby("motor_id")["ciclo"].max().rename("ciclo_max")
     df = df.join(max_ciclo, on="motor_id")
@@ -35,8 +34,7 @@ def add_rul_train(df, rul_max):
 
 def add_rul_test(df, rul_finales, rul_max):
     """
-    En test, NASA proporciona cuántos ciclos quedaban al final
-    del fragmento observado. Se suman los ciclos restantes y se calcula
+    Se suman los ciclos restantes y se calcula
     el RUL para cada ciclo de cada motor
     """
     rul_map = {
@@ -55,7 +53,7 @@ def add_rul_test(df, rul_finales, rul_max):
 
 def norm(train_df, test_df, feature_cols):
     """
-    MinMaxScaler ajustado SOLO sobre train.
+    MinMaxScaler ajustado sobre train.
     Aplica la misma transformación a test sin re-ajustar.
     """
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -136,26 +134,18 @@ def añadir_features_degradacion_rapido(df, sensor_cols, window_slope=10, suaviz
         for col in sensor_cols:
             serie = chunk[col].values  # array NumPy — operaciones vectorizadas
     
-            # ── Delta: resta directa, sin bucle ───────────────────────────
+            # Delta
             chunk[f"{col}_delta"] = serie - serie[0]
     
-            # ── Slope: OLS analítico vectorizado ──────────────────────────
-            # En una ventana [t-w+1 .. t], la pendiente OLS es:
-            #   slope = (Σ(x-x̄)(y-ȳ)) / (Σ(x-x̄)²)
-            # donde x son los índices 0..w-1, constantes para todas las ventanas
-            # Esto se puede calcular con rolling sobre toda la columna de una vez
+            # Slope: OLS analítico vectorizado
             s = pd.Series(serie)
     
             # Precomputar denominador — es constante para ventanas completas
-            # x = [0, 1, ..., w-1], x̄ = (w-1)/2
-            # Σ(x-x̄)² = w*(w²-1)/12  (fórmula cerrada)
             w = window_slope
             x_mean = (w - 1) / 2.0
             denom  = w * (w**2 - 1) / 12.0  # escalar, se calcula una vez
     
             # Numerador: rolling covarianza entre índices y valores
-            # Σ(x-x̄)(y-ȳ) = Σ(x·y) - w·x̄·ȳ
-            # Σ(x·y) con x=[0..w-1]: se puede expresar como suma ponderada
             weights_x = np.arange(w, dtype=np.float64) - x_mean  # (w,)
     
             # rolling_apply sobre toda la serie — una sola llamada
@@ -171,7 +161,7 @@ def añadir_features_degradacion_rapido(df, sensor_cols, window_slope=10, suaviz
                       .values)
             chunk[f"{col}_slope"] = slope
     
-            # ── Aceleración: diff del slope suavizado ─────────────────────
+            # Aceleración: diff del slope suavizado
             slope_suav = (pd.Series(slope)
                            .rolling(window=suavizado, min_periods=1)
                            .mean()
@@ -188,7 +178,6 @@ def identificar_condicion_operacional(df, n_condiciones=6):
     Las identificamos agrupando op_1, op_2, op_3 con KMeans.
     En FD001/FD003 con n_condiciones=1 asigna todo al cluster 0.
 
-    IMPORTANTE: llamar solo sobre train. Usar km.predict() para val y test.
     """
     op_cols = ["op_1", "op_2", "op_3"]
     
@@ -206,8 +195,6 @@ def normalizar_por_condicion(train_df, val_df, test_df, feature_cols, n_condicio
     Para FD002/FD004: ajusta un scaler distinto por condición operacional.
     Para FD001/FD003: normalización global (igual que antes).
     
-    Esto evita que el modelo confunda variación por régimen de vuelo
-    con variación por degradación.
     """
     train_df = train_df.copy()
     val_df = val_df.copy()
@@ -285,7 +272,7 @@ def extraer_condicion_por_ventana(df, window_size, n_condiciones):
 
 def extraer_condicion_por_ventana_test(df, window_size, n_condiciones):
     """
-    Para test solo tomamos la última ventana de cada motor.
+    Se usa la última ventana de cada motor.
     """
     static_list = []
 
