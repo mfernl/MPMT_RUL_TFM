@@ -4,7 +4,7 @@ Master's Thesis (MSc in Artificial Intelligence, VIU, 2026). Design and rigorous
 
 ## Overview
 
-Unplanned maintenance of turbofan engines costs up to €10M per event and is responsible for roughly 30% of commercial aviation delays. This project implements and compares three Prognostics and Health Management (PHM) approaches — a gradient-boosted tree ensemble and two deep learning architectures — to predict RUL from 21 simultaneous sensor channels, producing uncertainty estimates suitable for real maintenance decisions rather than point estimates alone.
+Unplanned maintenance of turbofan engines costs up to €10M per event and is responsible for roughly 30% of commercial aviation delays. This project implements and compares three Prognostics and Health Management (PHM) approaches, a gradient-boosted tree ensemble and two deep learning architectures, to predict RUL from 21 simultaneous sensor channels, producing uncertainty estimates suitable for real maintenance decisions rather than point estimates alone.
 
 ## Dataset
 
@@ -12,28 +12,28 @@ Unplanned maintenance of turbofan engines costs up to €10M per event and is re
 
 ## Models Implemented
 
-- **XGBoost** — gradient-boosted trees over engineered per-sensor window statistics (mean, std, min, max, range over a 60-cycle window) plus shared degradation features (cumulative delta, local slope, acceleration).
-- **CNN + BiLSTM + Bahdanau Attention** — hybrid architecture combining convolutional feature extraction with a bidirectional LSTM and a temporal attention mechanism that focuses on the most informative time steps.
-- **Temporal Fusion Transformer (TFT)** — self-attention architecture adapted from multi-horizon forecasting to RUL regression, with operating condition integrated as a static covariate.
+- **XGBoost**: gradient-boosted trees using per-sensor window statistics (mean, std, min, max, range over a 60-cycle window) plus shared degradation features (cumulative delta, local slope, acceleration).
+- **CNN + BiLSTM + Bahdanau Attention**: hybrid architecture combining convolutional feature extraction with a bidirectional LSTM and a temporal attention mechanism that focuses on the most informative time steps.
+- **Temporal Fusion Transformer (TFT)**: self-attention architecture adapted from multi-horizon forecasting to RUL regression, with operating condition integrated as a static covariate.
 
 ## Key Methodological Contribution
 
-Published CMAPSS literature commonly reports metrics inflated by data leakage — global train/test splits and scalers fit before splitting the data. This project instead uses:
+Published CMAPSS literature commonly reports metrics inflated by data leakage, global train/test splits and scalers fit before splitting the data. This project instead uses:
 
-- **Engine-level train/validation split** (`GroupShuffleSplit`) — no engine appears in both sets.
-- **Per-operating-condition normalization via K-Means clustering**, applied separately per subset, instead of a single global scaler that lets the operating regime mask the actual degradation signal.
+- **Engine-level train/validation split** (`GroupShuffleSplit`), no engine appears in both sets.
+- **Data normalization per operational condition via K-Means clustering**, applied separately per subset, instead of a single global scaler that lets the operating regime mask the actual degradation signal.
 
-This produces a stricter, leakage-free evaluation protocol — at the cost of direct numerical comparability with most published CMAPSS results (see Results below).
+This produces a leakage-free evaluation protocol.
 
 ## Uncertainty Quantification
 
-Each model estimates both epistemic and aleatoric uncertainty, using a different technique appropriate to its architecture:
+Each model estimates uncertainty, using a different technique appropriate to its architecture:
 
 | Model | Technique |
 |---|---|
-| TFT | Quantile regression (multi-quantile output heads) |
-| CNN-BiLSTM | Monte Carlo Dropout (epistemic) + heteroscedastic output head (aleatoric) — the only model quantifying both sources independently |
-| XGBoost | Quantile regression |
+| TFT | Quantile regression (multi-quantile output heads) (aleatoric) |
+| CNN-BiLSTM | Monte Carlo Dropout (epistemic) + heteroscedastic output head (aleatoric) |
+| XGBoost | Quantile regression (aleatoric) |
 
 ## Results
 
@@ -47,10 +47,10 @@ RMSE and NASA Score across the four CMAPSS subsets:
 | FD004 | 23.39 | 32.05 | **22.41** | 5,768.9 | 55,997 | **4,043** |
 
 **Findings:**
-- XGBoost achieved the best overall RMSE/Score on 3 of 4 subsets, outperforming both deep learning architectures by up to 10 RMSE points on the multi-condition subsets (FD002, FD004). Its explicit per-sensor window statistics generalize better than raw sequences on a dataset this size (100–249 engines per subset).
-- TFT led on FD001 (the single, simplest subset), where multi-head attention captures long-range temporal dependencies without interference from operating-regime variability.
-- TFT's quantile output produced the tightest uncertainty bands (24–35 cycles at [p10, p90]) vs. XGBoost's 60–85 cycles — at a steep training-time cost (up to ~1,023 min on FD004 vs. XGBoost's 6.75 min).
-- Despite the stricter, leakage-free protocol — not directly comparable to most published CMAPSS baselines — results remain competitive with the published state of the art.
+- XGBoost achieved the best overall RMSE/Score on 3 of 4 subsets, outperforming both deep learning architectures by up to 10 RMSE points on the multi-condition subsets (FD002, FD004). Its gradient boosting architecture grants this model better performance with fewer data compared to deep learning models.
+- TFT stood out on FD001 (the single, simplest subset), where multi-head attention captures long-range temporal dependencies without interference from operating-regime variability.
+- TFT's quantile output produced the tightest uncertainty bands (24–35 cycles at [p10, p90]) vs. XGBoost's 60–85 cycles.
+- Despite the stricter, leakage-free protocol (not directly comparable to most published CMAPSS baselines) results remain competitive with the published state of the art.
 
 ## Repository Structure
 
@@ -62,7 +62,7 @@ RMSE and NASA Score across the four CMAPSS subsets:
 └── TFT.ipynb             # Temporal Fusion Transformer, quantile regression
 ```
 
-Trained model weights are not tracked in this repository to keep it lightweight — every result is reproducible by running the notebooks against the CMAPSS dataset.
+Trained model weights are not tracked in this repository, every result is reproducible by running the notebooks against the CMAPSS dataset.
 
 ## Setup
 
