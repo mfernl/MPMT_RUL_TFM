@@ -55,12 +55,11 @@ RMSE and NASA Score across the four CMAPSS subsets:
 ## Repository Structure
 
 ```
-Prediction_models/
+.
 ├── CMAPSSDataset.py      # Shared preprocessing: degradation features, RUL labeling, K-Means per-condition normalization
 ├── XGBoost.ipynb         # XGBoost model, quantile regression, ablation study
 ├── TorchCNNBiLSTM.ipynb  # CNN-BiLSTM-Attention (PyTorch), MC Dropout + heteroscedastic head
-├── TFT.ipynb             # Temporal Fusion Transformer, quantile regression
-└── historial_entrenamiento.csv
+└── TFT.ipynb             # Temporal Fusion Transformer, quantile regression
 ```
 
 Trained model weights are not tracked in this repository to keep it lightweight — every result is reproducible by running the notebooks against the CMAPSS dataset.
