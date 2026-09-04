@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+.virtual_documents/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Trained model weights — kept out of version control, see README
+*.pt
+*.keras
+*.h5
